@@ -5,7 +5,9 @@
  */
 
 var context = context || (function () {
-    
+
+	var menuIDCounter = 0;
+
 	var options = {
 		fadeSpeed: 100,
 		filter: function ($obj) {
@@ -17,9 +19,9 @@ var context = context || (function () {
 	};
 
 	function initialize(opts) {
-		
+	
 		options = $.extend({}, options, opts);
-		
+	
 		$(document).on('click', 'html', function () {
 			$('.dropdown-context').fadeOut(options.fadeSpeed, function(){
 				$('.dropdown-context').css({display:''}).find('.drop-left').removeClass('drop-left');
@@ -39,7 +41,6 @@ var context = context || (function () {
 				$sub.addClass('drop-left');
 			}
 		});
-		
 	}
 
 	function updateOptions(opts){
@@ -89,49 +90,73 @@ var context = context || (function () {
 		return $menu;
 	}
 
-	function addContext(selector, data) {
+	function addContext($elements, data) {
+		if($elements.jquery == undefined)
+		{
+			$elements = $($elements);
+		}
+		var removeContextMenus = (data == undefined);
 		
-		var d = new Date(),
-			id = d.getTime(),
-			$menu = buildMenu(data, id);
-			
-		$('body').append($menu);
-		
-		
-		$(document).on('contextmenu', selector, function (e) {
-			e.preventDefault();
-			e.stopPropagation();
-			
-			$('.dropdown-context:not(.dropdown-context-sub)').hide();
-			
-			$dd = $('#dropdown-' + id);
-			if (typeof options.above == 'boolean' && options.above) {
-				$dd.addClass('dropdown-context-up').css({
-					top: e.pageY - 20 - $('#dropdown-' + id).height(),
-					left: e.pageX - 13
-				}).fadeIn(options.fadeSpeed);
-			} else if (typeof options.above == 'string' && options.above == 'auto') {
-				$dd.removeClass('dropdown-context-up');
-				var autoH = $dd.height() + 12;
-				if ((e.pageY + autoH) > $('html').height()) {
-					$dd.addClass('dropdown-context-up').css({
-						top: e.pageY - 20 - autoH,
-						left: e.pageX - 13
-					}).fadeIn(options.fadeSpeed);
-				} else {
-					$dd.css({
-						top: e.pageY + 10,
-						left: e.pageX - 13
-					}).fadeIn(options.fadeSpeed);
+		if(removeContextMenus)
+		{
+			$elements.each(function(index){
+				var $element = $(this);
+				var $menu = $element.data("context-menu");
+				if($menu != undefined)
+				{
+					$menu.remove();
 				}
-			}
-		});
-	}
+				$element.removeData("context-menu");
+				$element.unbind('contextmenu');
+			});
+		}
+		else
+		{
+			menuIDCounter += 1;
+
+			var d = new Date(),
+				id = menuIDCounter,
+				$menu = buildMenu(data, menuIDCounter);
+		
+			$('body').append($menu);
+
+			$elements.data("context-menu", $menu);
+			$elements.on('contextmenu', function (e) {
+				e.preventDefault();
+				e.stopPropagation();
 	
-	function destroyContext(selector) {
-		$(document).off('contextmenu', selector).off('click', '.context-event');
-	}
+				$('.dropdown-context:not(.dropdown-context-sub)').hide();
 	
+				$dd = $('#dropdown-' + id);
+				$dd.data("context-menu-referrer", $(e.currentTarget));
+				if (typeof options.above == 'boolean' && options.above) {
+					$dd.addClass('dropdown-context-up').css({
+						top: e.pageY - 20 - $('#dropdown-' + id).height(),
+						left: e.pageX - 13
+					}).fadeIn(options.fadeSpeed);
+				} else if (typeof options.above == 'string' && options.above == 'auto') {
+					$dd.removeClass('dropdown-context-up');
+					var autoH = $dd.height() + 12;
+					if ((e.pageY + autoH) > $('html').height()) {
+						$dd.addClass('dropdown-context-up').css({
+							top: e.pageY - 20 - autoH,
+							left: e.pageX - 13
+						}).fadeIn(options.fadeSpeed);
+					} else {
+						$dd.css({
+							top: e.pageY + 10,
+							left: e.pageX - 13
+						}).fadeIn(options.fadeSpeed);
+					}
+				}
+			});
+		}
+	}
+
+	function destroyContext($elements) {
+		addContext($elements);
+	}
+
 	return {
 		init: initialize,
 		settings: updateOptions,
